@@ -88,3 +88,8 @@ render();
 
 </body>
 </html>
+
+function toggleRead(index) {
+  books[index].read = !books[index].read;
+  save();
+}
