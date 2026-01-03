@@ -194,14 +194,31 @@ function deleteBook(index) {
 // Scanner
 function startScan() {
   if (qr) stopScan();
+
   qr = new Html5Qrcode("reader");
+
+  // Paramètres optimisés
+  const config = {
+    fps: 20,             // Fréquence de lecture, plus fluide
+    qrbox: 400,          // Zone de scan plus grande
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    }
+  };
+
   qr.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
-    text => { document.getElementById("isbn").value = text; stopScan(); },
+    { facingMode: { exact: "environment" } }, // Forcer caméra arrière
+    config,
+    text => {
+      document.getElementById("isbn").value = text;
+      stopScan(); // fermer automatiquement après lecture
+    },
     err => {}
-  );
+  ).catch(err => {
+    alert("Impossible d’accéder à la caméra : " + err);
+  });
 }
+
 
 // Fermer scanner
 function stopScan() {
