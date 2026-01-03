@@ -31,7 +31,9 @@ input { width: 100%; padding: 8px; margin-bottom: 10px; }
 
 <script>
 let books = JSON.parse(localStorage.getItem("books") || "[]");
+let qr = null; // scanner global
 
+  
 function save() {
   localStorage.setItem("books", JSON.stringify(books));
   render();
@@ -80,13 +82,19 @@ function fetchBook() {
 let qr; // variable globale pour le scanner
 
 function startScan() {
+  if (qr) {
+    // si un scanner existe déjà, on le stoppe
+    stopScan();
+  }
+
   qr = new Html5Qrcode("reader");
+
   qr.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     text => {
       document.getElementById("isbn").value = text;
-      stopScan(); // ferme automatiquement après lecture
+      stopScan(); // ferme automatiquement après lecture réussie
     },
     err => {}
   );
@@ -95,8 +103,9 @@ function startScan() {
 function stopScan() {
   if (qr) {
     qr.stop().then(() => {
-      qr.clear();
+      qr.clear(); // nettoie l’écran
       document.getElementById("reader").innerHTML = "";
+      qr = null; // réinitialise pour pouvoir relancer plus tard
     }).catch(err => console.log(err));
   }
 }
