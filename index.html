@@ -8,178 +8,115 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-  padding: 15px;
-  background: #f5f6fa;
-  color: #2f3640;
-}
-
-h2 {
-  text-align: center;
-  color: #40739e;
-}
-
-button {
-  padding: 10px 15px;
-  margin: 5px 0;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.2s;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-button.scan { background-color: #44bd32; color: white; }
-button.close { background-color: #e84118; color: white; }
-button.read { background-color: #273c75; color: white; }
-
-input#isbn {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #dcdde1;
-  margin-bottom: 10px;
-}
-
-#books {
-  margin-top: 15px;
-}
-
-.book {
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-  padding: 15px;
-  margin-top: 15px;
-  display: flex;
-  flex-direction: column;
-}
-
-.book b {
-  color: #40739e;
-  font-size: 1.1em;
-  margin-bottom: 5px;
-}
-
-.book button {
-  margin-top: 10px;
-  border-radius: 8px;
-}
+body { font-family: Arial; padding: 15px; }
+button { padding: 10px; margin: 5px 0; width: 100%; }
+input { width: 100%; padding: 8px; margin-bottom: 10px; }
+.book { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
 </style>
 </head>
 
 <body>
 
-<h2>📚 Ma Bibliothèque</h2>
+<h2>📚 Ma bibliothèque</h2>
 
-<button class="scan" onclick="startScan()">📷 Scanner un ISBN</button>
-<button class="close" onclick="stopScan()">❌ Fermer le scanner</button>
+<button onclick="startScan()">📷 Scanner un ISBN</button>
+  <button onclick="stopScan()">❌ Fermer le scanner</button>
+
 <div id="reader"></div>
 
-<input id="isbn" placeholder="Entrez un ISBN">
-<button class="read" onclick="fetchBook()">➕ Ajouter le livre</button>
+<input id="isbn" placeholder="ISBN" />
+<button onclick="fetchBook()">➕ Ajouter le livre</button>
 
 <div id="books"></div>
 
 <script>
 let books = JSON.parse(localStorage.getItem("books") || "[]");
-let qr = null;
+let qr = null; // scanner global
 
-// Sauvegarder et afficher
+  
 function save() {
   localStorage.setItem("books", JSON.stringify(books));
   render();
 }
 
-// Affichage des livres
 function render() {
   document.getElementById("books").innerHTML = books.map((b, i) =>
     `<div class="book">
-      <b>${b.title}</b>
-      <span>${b.author}</span><br>
-      <small>ISBN : ${b.isbn}</small><br>
-      <button class="read" onclick="toggleRead(${i})">
+      <b>${b.title}</b><br>
+      ${b.author}<br>
+      ISBN : ${b.isbn}<br>
+      <button onclick="toggleRead(${i})">
         ${b.read ? "📘 Marquer non lu" : "📗 Marquer lu"}
       </button>
     </div>`
   ).join("");
 }
 
-// Ajouter livre
-function fetchBook() {
-  const input = document.getElementById("isbn");
-  const isbn = input.value.trim();
-  if (!isbn) { alert("Entre un ISBN"); return; }
-
-  fetch(`https://openlibrary.org/isbn/${isbn}.json`)
-    .then(response => {
-      if (!response.ok) throw new Error("Livre non trouvé");
-      return response.json();
-    })
-    .then(data => {
-      books.push({
-        isbn,
-        title: data.title || "Titre inconnu",
-        author: data.authors ? data.authors.map(a=>a.name).join(", ") : "Auteur inconnu",
-        read: false
-      });
-      save();
-      input.value = "";
-      stopScan();
-    })
-    .catch(() => {
-      books.push({
-        isbn,
-        title: "À compléter",
-        author: "À compléter",
-        read: false
-      });
-      save();
-      input.value = "";
-      alert("Livre ajouté sans infos automatiques");
-    });
-}
-
-// Bouton Lu / Non lu
 function toggleRead(index) {
   books[index].read = !books[index].read;
   save();
 }
 
-// Scanner
+function fetchBook() {
+  const input = document.getElementById("isbn");
+  const isbn = input.value.trim();
+  if (!isbn) return;
+
+  fetch(`https://openlibrary.org/isbn/${isbn}.json`)
+    .then(r => r.json())
+    .then(data => {
+      books.push({
+        isbn,
+        title: data.title || "Titre inconnu",
+        author: "Auteur inconnu",
+        read: false
+      });
+      save();
+
+      // 🔽 IMPORTANT : réinitialisation
+      input.value = "";
+      document.getElementById("reader").innerHTML = "";
+    });
+}
+
+let qr; // variable globale pour le scanner
+
 function startScan() {
-  if (qr) stopScan();
+  if (qr) {
+    // si un scanner existe déjà, on le stoppe
+    stopScan();
+  }
+
   qr = new Html5Qrcode("reader");
+
   qr.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: 250, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
+    { fps: 10, qrbox: 250 },
     text => {
       document.getElementById("isbn").value = text;
-      stopScan();
+      stopScan(); // ferme automatiquement après lecture réussie
     },
     err => {}
   );
 }
 
-// Fermer scanner
 function stopScan() {
   if (qr) {
     qr.stop().then(() => {
-      qr.clear();
+      qr.clear(); // nettoie l’écran
       document.getElementById("reader").innerHTML = "";
-      qr = null;
+      qr = null; // réinitialise pour pouvoir relancer plus tard
     }).catch(err => console.log(err));
   }
 }
 
+
 render();
+
+
+  
 </script>
 
 </body>
 </html>
+
