@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ma Bibliothèque</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-
 <style>
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -64,15 +62,15 @@ button.read { background-color: #273c75; color: white; }
   margin-bottom: 10px;
 }
 .filter-container input, .filter-container select { flex: 1; }
+#reader video { width: 100%; border-radius: 10px; margin-top: 10px; }
 </style>
 </head>
 
 <body>
 <h2>📚 Ma Bibliothèque</h2>
 
-<!-- Scanner -->
+<!-- Scanner HD -->
 <button class="scan" onclick="startScanNative()">📷 Scanner un ISBN (HD)</button>
-<button class="close" onclick="stopScan()">❌ Fermer le scanner</button>
 <div id="reader"></div>
 
 <!-- Ajout manuel -->
@@ -91,12 +89,11 @@ button.read { background-color: #273c75; color: white; }
   <input id="searchSerie" placeholder="Filtrer par série" oninput="render()">
 </div>
 
-<!-- Liste -->
+<!-- Liste des livres -->
 <div id="books"></div>
 
 <script>
 let books = JSON.parse(localStorage.getItem("books") || "[]");
-let qr = null;
 
 // Sauvegarder et afficher
 function save() {
@@ -104,30 +101,35 @@ function save() {
   render();
 }
 
-// Affichage avec filtres et tomes manquants
+// Reset champs après ajout
+function resetFields() {
+  ["isbn","titre","auteur","serie","tome","format","edition"].forEach(id=>document.getElementById(id).value="");
+}
+
+// Affichage avec filtres et tri
 function render() {
   const filterAuteur = document.getElementById("searchAuteur").value.toLowerCase();
   const filterSerie = document.getElementById("searchSerie").value.toLowerCase();
 
   document.getElementById("books").innerHTML = books
     .filter(b =>
-      b.author.toLowerCase().includes(filterAuteur) &&
-      b.serie.toLowerCase().includes(filterSerie)
+      (b.author||"").toLowerCase().includes(filterAuteur) &&
+      (b.serie||"").toLowerCase().includes(filterSerie)
     )
     .sort((a,b) => (a.serie||"").localeCompare(b.serie||"") || (a.tome||0)-(b.tome||0))
-    .map((b, i) =>
-    `<div class="book">
-      <b>${b.title}</b>
-      <span>${b.author}</span><br>
-      <small>ISBN: ${b.isbn}</small><br>
-      Série: ${b.serie || "-"} | Tome: ${b.tome || "-"}<br>
-      Format: ${b.format || "-"} | Édition: ${b.edition || "-"}<br>
-      <button class="read" onclick="toggleRead(${i})">
-        ${b.read ? "📘 Marquer non lu" : "📗 Marquer lu"}
-      </button>
-      <button onclick="deleteBook(${i})" style="background:#e1b12c; color:white;">🗑 Supprimer</button>
-    </div>`
-  ).join("");
+    .map((b,i) =>
+      `<div class="book">
+        <b>${b.title}</b>
+        <span>${b.author}</span><br>
+        <small>ISBN: ${b.isbn}</small><br>
+        Série: ${b.serie || "-"} | Tome: ${b.tome || "-"}<br>
+        Format: ${b.format || "-"} | Édition: ${b.edition || "-"}<br>
+        <button class="read" onclick="toggleRead(${i})">
+          ${b.read ? "📘 Marquer non lu" : "📗 Marquer lu"}
+        </button>
+        <button onclick="deleteBook(${i})" style="background:#e1b12c; color:white;">🗑 Supprimer</button>
+      </div>`
+    ).join("");
 }
 
 // Ajouter un livre
@@ -143,6 +145,7 @@ function fetchBook() {
   const format = document.getElementById("format").value.trim();
   const edition = document.getElementById("edition").value.trim();
 
+  // Essaie de récupérer via OpenLibrary
   fetch(`https://openlibrary.org/isbn/${isbn}.json`)
     .then(res => {
       if (!res.ok) throw new Error("Livre non trouvé");
@@ -157,7 +160,6 @@ function fetchBook() {
         read: false
       });
       save(); resetFields();
-      stopScan();
     })
     .catch(() => {
       books.push({
@@ -170,11 +172,6 @@ function fetchBook() {
       save(); resetFields();
       alert("Livre ajouté sans infos automatiques");
     });
-}
-
-// Reset champs après ajout
-function resetFields() {
-  ["isbn","titre","auteur","serie","tome","format","edition"].forEach(id=>document.getElementById(id).value="");
 }
 
 // Lu / Non lu
@@ -191,48 +188,57 @@ function deleteBook(index) {
   }
 }
 
-// Scanner
-function startScan() {
-  if (qr) stopScan();
+// ===== SCANNER HAUTE QUALITÉ NATIF =====
+async function startScanNative() {
+  const readerDiv = document.getElementById('reader');
+  readerDiv.innerHTML = ""; // vide l'ancien scanner
 
-  qr = new Html5Qrcode("reader");
+  const video = document.createElement('video');
+  video.style.width = '100%';
+  readerDiv.appendChild(video);
 
-  // Paramètres optimisés
-  const config = {
-    fps: 20,             // Fréquence de lecture, plus fluide
-    qrbox: 400,          // Zone de scan plus grande
-    experimentalFeatures: {
-      useBarCodeDetectorIfSupported: true
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment', // caméra arrière
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        focusMode: 'continuous'
+      }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    if (!('BarcodeDetector' in window)) {
+      alert("Ton navigateur ne supporte pas BarcodeDetector. Utilise Chrome/Edge récent.");
+      return;
     }
-  };
-  
-qr.start(
-  { 
-    facingMode: "environment",
-    width: 1920,  // largeur max
-    height: 1080  // hauteur max
-  },
-  { fps: 20, qrbox: 400, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
-  text => {
-    document.getElementById("isbn").value = text;
-    stopScan();
-  },
-  err => {}
-);
 
+    const detector = new BarcodeDetector({ formats: ['ean_13'] });
 
+    const scanLoop = async () => {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          document.getElementById('isbn').value = barcodes[0].rawValue;
+          stream.getTracks().forEach(track => track.stop());
+          video.remove();
+        } else {
+          requestAnimationFrame(scanLoop);
+        }
+      } catch(e) {
+        console.error(e);
+        requestAnimationFrame(scanLoop);
+      }
+    };
+    scanLoop();
 
-// Fermer scanner
-function stopScan() {
-  if (qr) {
-    qr.stop().then(()=>{
-      qr.clear();
-      document.getElementById("reader").innerHTML="";
-      qr=null;
-    }).catch(err=>console.log(err));
+  } catch(e) {
+    alert("Impossible d’accéder à la caméra : " + e);
   }
 }
 
+// Affichage initial
 render();
 </script>
 
