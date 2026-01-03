@@ -36,15 +36,18 @@ function save() {
 }
 
 function render() {
-  document.getElementById("books").innerHTML = books.map(b =>
+  document.getElementById("books").innerHTML = books.map((b, i) =>
     `<div class="book">
       <b>${b.title}</b><br>
       ${b.author}<br>
       ISBN : ${b.isbn}<br>
-      Lu : ${b.read ? "✅" : "❌"}
+      <button onclick="toggleRead(${i})">
+        ${b.read ? "📘 Marquer non lu" : "📗 Marquer lu"}
+      </button>
     </div>`
   ).join("");
 }
+
 
 function fetchBook() {
   const input = document.getElementById("isbn");
