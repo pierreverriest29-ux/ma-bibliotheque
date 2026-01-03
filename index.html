@@ -205,19 +205,21 @@ function startScan() {
       useBarCodeDetectorIfSupported: true
     }
   };
+  
+qr.start(
+  { 
+    facingMode: "environment",
+    width: 1920,  // largeur max
+    height: 1080  // hauteur max
+  },
+  { fps: 20, qrbox: 400, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
+  text => {
+    document.getElementById("isbn").value = text;
+    stopScan();
+  },
+  err => {}
+);
 
-  qr.start(
-    { facingMode: { exact: "environment" } }, // Forcer caméra arrière
-    config,
-    text => {
-      document.getElementById("isbn").value = text;
-      stopScan(); // fermer automatiquement après lecture
-    },
-    err => {}
-  ).catch(err => {
-    alert("Impossible d’accéder à la caméra : " + err);
-  });
-}
 
 
 // Fermer scanner
