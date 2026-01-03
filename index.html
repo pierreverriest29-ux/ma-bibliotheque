@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-/* Style global */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
@@ -17,13 +16,11 @@ body {
   color: #2f3640;
 }
 
-/* Titres */
 h2 {
   text-align: center;
   color: #40739e;
 }
 
-/* Boutons modernes */
 button {
   padding: 10px 15px;
   margin: 5px 0;
@@ -38,12 +35,10 @@ button:hover {
   opacity: 0.9;
 }
 
-/* Boutons spécifiques */
 button.scan { background-color: #44bd32; color: white; }
 button.close { background-color: #e84118; color: white; }
 button.read { background-color: #273c75; color: white; }
 
-/* Input ISBN */
 input#isbn {
   width: 100%;
   padding: 10px;
@@ -52,7 +47,10 @@ input#isbn {
   margin-bottom: 10px;
 }
 
-/* Liste des livres sous forme de cartes */
+#books {
+  margin-top: 15px;
+}
+
 .book {
   background: white;
   border-radius: 15px;
@@ -80,29 +78,26 @@ input#isbn {
 
 <h2>📚 Ma Bibliothèque</h2>
 
-<!-- Scanner -->
 <button class="scan" onclick="startScan()">📷 Scanner un ISBN</button>
 <button class="close" onclick="stopScan()">❌ Fermer le scanner</button>
 <div id="reader"></div>
 
-<!-- Ajouter ISBN manuellement -->
 <input id="isbn" placeholder="Entrez un ISBN">
 <button class="read" onclick="fetchBook()">➕ Ajouter le livre</button>
 
-<!-- Liste des livres -->
 <div id="books"></div>
 
 <script>
 let books = JSON.parse(localStorage.getItem("books") || "[]");
 let qr = null;
 
-// Sauvegarder et re-render
+// Sauvegarder et afficher
 function save() {
   localStorage.setItem("books", JSON.stringify(books));
   render();
 }
 
-// Afficher les livres
+// Affichage des livres
 function render() {
   document.getElementById("books").innerHTML = books.map((b, i) =>
     `<div class="book">
@@ -116,7 +111,7 @@ function render() {
   ).join("");
 }
 
-// Ajouter un livre
+// Ajouter livre
 function fetchBook() {
   const input = document.getElementById("isbn");
   const isbn = input.value.trim();
