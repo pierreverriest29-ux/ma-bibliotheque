@@ -47,17 +47,24 @@ function render() {
 }
 
 function fetchBook() {
-  const isbn = document.getElementById("isbn").value;
+  const input = document.getElementById("isbn");
+  const isbn = input.value.trim();
+  if (!isbn) return;
+
   fetch(`https://openlibrary.org/isbn/${isbn}.json`)
     .then(r => r.json())
     .then(data => {
       books.push({
         isbn,
-        title: data.title || "Inconnu",
+        title: data.title || "Titre inconnu",
         author: "Auteur inconnu",
         read: false
       });
       save();
+
+      // 🔽 IMPORTANT : réinitialisation
+      input.value = "";
+      document.getElementById("reader").innerHTML = "";
     });
 }
 
