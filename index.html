@@ -77,17 +77,30 @@ function fetchBook() {
     });
 }
 
+let qr; // variable globale pour le scanner
+
 function startScan() {
-  const qr = new Html5Qrcode("reader");
+  qr = new Html5Qrcode("reader");
   qr.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     text => {
       document.getElementById("isbn").value = text;
-      qr.stop();
-    }
+      stopScan(); // ferme automatiquement après lecture
+    },
+    err => {}
   );
 }
+
+function stopScan() {
+  if (qr) {
+    qr.stop().then(() => {
+      qr.clear();
+      document.getElementById("reader").innerHTML = "";
+    }).catch(err => console.log(err));
+  }
+}
+
 
 render();
 
