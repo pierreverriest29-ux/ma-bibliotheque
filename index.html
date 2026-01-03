@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Bibliothèque</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body { font-family: Arial; padding: 15px; }
+button { padding: 10px; margin: 5px 0; width: 100%; }
+input { width: 100%; padding: 8px; margin-bottom: 10px; }
+.book { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+
+<body>
+
+<h2>📚 Ma bibliothèque</h2>
+
+<button onclick="startScan()">📷 Scanner un ISBN</button>
+<div id="reader"></div>
+
+<input id="isbn" placeholder="ISBN" />
+<button onclick="fetchBook()">➕ Ajouter le livre</button>
+
+<div id="books"></div>
+
+<script>
+let books = JSON.parse(localStorage.getItem("books") || "[]");
+
+function save() {
+  localStorage.setItem("books", JSON.stringify(books));
+  render();
+}
+
+function render() {
+  document.getElementById("books").innerHTML = books.map(b =>
+    `<div class="book">
+      <b>${b.title}</b><br>
+      ${b.author}<br>
+      ISBN : ${b.isbn}<br>
+      Lu : ${b.read ? "✅" : "❌"}
+    </div>`
+  ).join("");
+}
+
+function fetchBook() {
+  const isbn = document.getElementById("isbn").value;
+  fetch(`https://openlibrary.org/isbn/${isbn}.json`)
+    .then(r => r.json())
+    .then(data => {
+      books.push({
+        isbn,
+        title: data.title || "Inconnu",
+        author: "Auteur inconnu",
+        read: false
+      });
+      save();
+    });
+}
+
+function startScan() {
+  const qr = new Html5Qrcode("reader");
+  qr.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    text => {
+      document.getElementById("isbn").value = text;
+      qr.stop();
+    }
+  );
+}
+
+render();
+</script>
+
+</body>
+</html>
