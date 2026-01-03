@@ -48,6 +48,10 @@ function render() {
   ).join("");
 }
 
+function toggleRead(index) {
+  books[index].read = !books[index].read;
+  save();
+}
 
 function fetchBook() {
   const input = document.getElementById("isbn");
@@ -85,10 +89,6 @@ function startScan() {
 
 render();
 
-function toggleRead(index) {
-  books[index].read = !books[index].read;
-  save();
-}
 
   
 </script>
